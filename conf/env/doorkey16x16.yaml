@@ -1,0 +1,5 @@
+# The largest registered DoorKey size, the subject of the final report. 1M steps
+# is the default budget as a starting point; a larger budget is a documented choice.
+# @package _group_
+env_id: MiniGrid-DoorKey-16x16-v0
+total_timesteps: 1000000

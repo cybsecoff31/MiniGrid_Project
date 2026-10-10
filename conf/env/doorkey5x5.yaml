@@ -1,0 +1,5 @@
+# Required. Pick up the key, unlock the door, reach the goal. Budget fixed by
+# the project handout.
+# @package _group_
+env_id: MiniGrid-DoorKey-5x5-v0
+total_timesteps: 500000

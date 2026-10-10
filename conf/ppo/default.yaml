@@ -1,0 +1,55 @@
+# PPO hyperparameters. These are the CleanRL defaults for small discrete tasks;
+# nothing here was tuned for DoorKey. Each one is something you may change,
+# but change one at a time and keep the control run.
+#
+# Where each value enters the algorithm is marked in ppo_minigrid.py with the
+# same name (search for cfg.ppo.<name>).
+# @package _group_
+
+# --- Rollout: how much experience one update sees ------------------------------
+# Parallel copies of the environment, stepped in lockstep.
+num_envs: 8
+# Steps each copy takes before an update. One batch = num_envs * num_steps = 1024.
+num_steps: 128
+
+# --- Optimiser ------------------------------------------------------------------
+# Adam step size.
+learning_rate: 2.5e-4
+# Decay the learning rate linearly to 0 over the run. false keeps it constant.
+anneal_lr: true
+# Global norm the gradient is clipped to before each optimiser step.
+max_grad_norm: 0.5
+
+# --- Return estimation ----------------------------------------------------------
+# Discount. Reward t steps ahead counts gamma^t. DoorKey episodes run up to
+# hundreds of steps, so 0.99 halves the value of a reward ~70 steps away.
+gamma: 0.99
+# GAE lambda. 1.0 = Monte-Carlo returns (high variance), 0.0 = one-step TD
+# (biased by the critic). 0.95 is the usual middle.
+gae_lambda: 0.95
+
+# --- Update: how the batch is consumed ------------------------------------------
+# The batch is split into this many minibatches per epoch (1024 / 4 = 256 samples).
+num_minibatches: 4
+# Passes over the batch per update. More epochs = more reuse of the same data
+# = larger policy change per update.
+update_epochs: 4
+
+# --- PPO losses -----------------------------------------------------------------
+# Clip range epsilon for the policy ratio pi_new/pi_old, clipped to [1-eps, 1+eps].
+# Also used as the value-clip range when clip_vloss is true.
+clip_coef: 0.2
+# Clip the value loss the same way: the critic's new prediction may move at most
+# clip_coef away from the value it predicted at rollout time. The original PPO
+# paper does not do this; CleanRL does by default. Its effect is contested.
+clip_vloss: true
+# Normalise advantages within each minibatch to zero mean, unit variance.
+norm_adv: true
+# Entropy bonus weight. Constant. Higher = keeps the policy random for longer.
+# Note this is the same bonus at step 0 and at step 1M.
+ent_coef: 0.01
+# Weight of the value loss relative to the policy loss.
+vf_coef: 0.5
+# Stop the epochs early when the approximate KL between old and new policy
+# exceeds this. null disables the check.
+target_kl: null

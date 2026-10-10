@@ -1,0 +1,65 @@
+# Training configuration for ppo_minigrid.py. Hydra reads this file, merges the
+# groups listed under `defaults`, then applies the key=value overrides from the
+# command line:
+#
+#   python ppo_minigrid.py env=doorkey5x5 seed=1
+#   python ppo_minigrid.py env=doorkey8x8 seed=2 ppo.ent_coef=0.02 ppo.anneal_lr=false
+#   python ppo_minigrid.py --cfg job          # print the resolved config and exit
+#   python ppo_minigrid.py --help
+#
+# A key that does not exist in these files is an error, so a typo cannot
+# silently become an unused option. To add a hyperparameter, add it here (or in
+# the group file it belongs to) and read it in the code as cfg.<group>.<key>.
+# Every parameter is defined where it is declared: the task in conf/env/, the
+# algorithm in conf/ppo/, and the run-level settings below.
+
+defaults:
+  - env: empty5x5      # which task and how many steps. Files in conf/env/
+  - ppo: default       # PPO hyperparameters. Files in conf/ppo/
+  - _self_
+  - override hydra/hydra_logging: none
+  - override hydra/job_logging: none
+
+# Label for this experiment. Goes into the run directory name, nothing else
+# reads it. Name the change you are testing, e.g. "ent0.02" or "control".
+exp_name: ppo
+
+# One seed for Python's random, numpy and torch. Sub-environment i is reset
+# with seed + i. Same seed, same machine, same thread count -> byte-identical
+# metrics.csv (see README, "Checking determinism").
+seed: 1
+
+# cpu | mps | cuda | auto. CPU is the default on purpose: this network is tiny
+# and the CPU run is the one whose determinism the README describes. `auto`
+# picks cuda, then mps, then cpu.
+device: cpu
+
+# torch.set_num_threads(). Fixed because the thread count changes the order of
+# floating-point reductions and therefore the bits of the result. 0 leaves
+# torch's own default in place.
+torch_threads: 4
+
+# Where run directories are created.
+runs_dir: runs
+
+# Run directory name under runs_dir. null -> <env_id>__<exp_name>__seed<seed>__<utc timestamp>.
+run_name: null
+
+# Write model.pt (final weights + this config) at the end of training.
+# eval_checkpoint.py needs it.
+save_model: true
+
+# Hydra itself writes nothing: no outputs/ directory, no .hydra/ folder, no log
+# file. ppo_minigrid.py writes its own run record under runs_dir. A sweep
+# (`python ppo_minigrid.py -m seed=1,2,3 env=doorkey8x8`) runs the jobs one
+# after another, each with its own run directory as usual; Hydra's own
+# multirun.yaml lands under runs_dir/multirun/ (gitignored with the rest).
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+  sweep:
+    dir: ${runs_dir}/multirun/${now:%Y%m%dT%H%M%S}
+    subdir: .
+  job:
+    chdir: false

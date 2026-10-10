@@ -1,0 +1,25 @@
+# Configuration for sb3_sanity.py, the Stable-Baselines3 reference. Not the
+# deliverable. Its PPO hyperparameters are fixed in the script on purpose.
+#
+#   python sb3_sanity.py env_id=MiniGrid-Empty-5x5-v0 total_timesteps=100000
+
+defaults:
+  - _self_
+  - override hydra/hydra_logging: none
+  - override hydra/job_logging: none
+
+env_id: MiniGrid-Empty-5x5-v0
+total_timesteps: 100000
+seed: 1
+n_envs: 8
+device: cpu
+
+# Where to write the result JSON. null -> runs/sb3_<env_id>_seed<seed>/sb3_sanity.json
+out: null
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+  job:
+    chdir: false

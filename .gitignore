@@ -1,0 +1,45 @@
+# Run outputs. Every training run writes here; nothing in it belongs in git.
+runs/
+wandb/
+
+# Checkpoints and tensorboard event files, wherever they land
+*.pt
+*.pth
+*.ckpt
+events.out.tfevents.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Large data and media
+*.npz
+*.npy
+*.h5
+*.hdf5
+*.zip
+*.tar
+*.tar.gz
+*.mp4
+*.gif
+
+# tmux run logs
+logs/
+
+# macOS
+.DS_Store
+
+# vscode settings
+.vscode/

@@ -1,0 +1,65 @@
+# Configuration for eval_checkpoint.py.
+#
+#   python eval_checkpoint.py model_path=runs/<run>/model.pt policy.also_random=true
+#
+# Three levels. The top level fixes the protocol: which checkpoint, how many
+# episodes, on which layouts. `policy` says which policies play them.
+# `render` says which of those episodes are also drawn as GIFs.
+#
+# The defaults implement the course evaluation protocol (200 episodes,
+# evaluation seed 12345, sampled actions), so the bare command already conforms.
+
+defaults:
+  - _self_
+  - override hydra/hydra_logging: none
+  - override hydra/job_logging: none
+
+# Path to a model.pt written by ppo_minigrid.py. Required.
+model_path: ???
+
+# Environment to evaluate on. null -> the one recorded in the checkpoint.
+env_id: null
+
+# Evaluation episodes. 200 is fixed by the course protocol; change it only for
+# a deliberate departure and say so in the report.
+episodes: 200
+
+# Evaluation seed. Episode i is played on layout seed + i, so every run in the
+# course is scored on the same 200 layouts. Also seeds torch, so the sampled
+# policy is reproducible.
+seed: 12345
+
+device: cpu
+
+policy:
+  # How the trained policy picks actions.
+  #   sampled: draw from the action distribution (the protocol). Writes eval.json.
+  #   argmax:  take the most likely action. Writes eval-argmax.json instead, so a
+  #            look at the greedy policy never overwrites the protocol result.
+  mode: sampled
+  # Also play a uniform-random policy on the same layouts and report it next to
+  # the trained one. The report needs this comparison.
+  also_random: false
+
+render:
+  # Draw GIFs of evaluation episodes, one file per episode, under
+  # runs/<run>/render/<policy>/ep<i>.gif where <policy> is sampled, argmax or
+  # random and <i> is the episode index (layout seed + i). Off by default.
+  enabled: false
+  # Which episodes: the first `first` ones, or exactly the indices in `only`
+  # when it is set, e.g. render.only=[0,17,199].
+  first: 5
+  only: null
+  # Shade the 7x7 patch the agent sees, so partial observability is visible.
+  highlight: true
+  # Pixels per grid cell.
+  tile_size: 32
+  # Milliseconds per frame in the GIF.
+  frame_ms: 200
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+  job:
+    chdir: false
