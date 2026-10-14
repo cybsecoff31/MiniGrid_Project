@@ -1,0 +1,4 @@
+# Required. Same task on a 6x6 grid. Budget fixed by the project handout.
+# @package _group_
+env_id: MiniGrid-DoorKey-6x6-v0
+total_timesteps: 1000000

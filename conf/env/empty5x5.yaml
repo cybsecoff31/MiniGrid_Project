@@ -1,0 +1,8 @@
+# Smoke test. Empty room, walk to the green square. If this does not learn,
+# something is broken. Return should pass 0.90 well before 100k steps.
+# @package _group_
+env_id: MiniGrid-Empty-5x5-v0
+
+# Environment steps for the whole run. The number actually run is rounded down
+# to a whole number of rollout batches (ppo.num_envs * ppo.num_steps).
+total_timesteps: 100000
