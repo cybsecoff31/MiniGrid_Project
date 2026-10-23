@@ -19,8 +19,18 @@ PY=python          # the cap6671 interpreter
 
 # Commit the code first: every run records git.json, and a dirty tree means the
 # recorded commit does not describe the code that ran.
-if [ -n "$(git status --porcelain -- '*.py' conf)" ]; then
-  echo "Commit your code changes before running the comparison (git.json would be dirty)." >&2
+# if [ -n "$(git status --porcelain -- '*.py' conf)" ]; then
+#  echo "Commit your code changes before running the comparison (git.json would be dirty)." >&2
+#  exit 1
+# fi
+# Commit the code first: every run records git.json, and a dirty tree means the
+# recorded commit does not describe the code that ran.
+# Same test the trainer uses for git.json "dirty": ANY uncommitted or untracked
+# file outside .gitignore. Commit it, or move it out of the repo folder.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Working tree not clean; every run's git.json would be marked dirty:" >&2
+  git status --porcelain >&2
+  echo "Commit these files (or move them out of the repo), then rerun." >&2
   exit 1
 fi
 

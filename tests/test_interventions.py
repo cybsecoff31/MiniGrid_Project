@@ -17,9 +17,15 @@ proposal commits to, before any compute is spent on the 8x8 comparison:
     * the state channel stays in {0,1,2} for all four facing directions
       (without the fix, facing up writes 3 there and the one-hot crashes)
     * the unchanged Agent accepts the full-grid input and outputs 7 logits
+  # Baseline
+  #  * on the 7x7 view the conv stack already ends at 1x1, so the added
+  #    AdaptiveAvgPool2d is the identity
   Baseline
     * on the 7x7 view the conv stack already ends at 1x1, so the added
       AdaptiveAvgPool2d is the identity
+  End to end (about 10-20 s)
+    * one real PPO iteration per group trains and saves a model
+    * the full-view model evaluates
 """
 
 import os
@@ -152,12 +158,38 @@ def test_pool_is_identity_on_7x7():
         spatial = convs(x).shape[-2:]
     check("baseline conv stack ends at 1x1 on 7x7 (pool is the identity)", tuple(spatial) == (1, 1))
 
+def test_one_iteration_each_group():
+    """End-to-end: one real PPO iteration (1,024 steps) per group, then a short
+    evaluation of the full-view model. Catches shape bugs in the training loop
+    (rollout buffer) and in evaluation that the unit checks above cannot."""
+    import subprocess
+    import tempfile
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with tempfile.TemporaryDirectory() as tmp:
+        for env in ("doorkey8x8", "doorkey8x8_shaped", "doorkey8x8_fullobs"):
+            cmd = [sys.executable, "ppo_minigrid.py", f"env={env}", "env.total_timesteps=1024",
+                   "seed=1", f"runs_dir={tmp}", f"run_name=t_{env}"]
+            r = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
+            ok = r.returncode == 0 and os.path.exists(os.path.join(tmp, f"t_{env}", "model.pt"))
+            if not ok:
+                print(r.stderr[-1500:])
+            check(f"end-to-end: one training iteration on {env}", ok)
+        model = os.path.join(tmp, "t_doorkey8x8_fullobs", "model.pt")
+        r = subprocess.run([sys.executable, "eval_checkpoint.py", f"model_path={model}", "episodes=2"],
+                           cwd=root, capture_output=True, text=True)
+        if r.returncode != 0:
+            print(r.stderr[-1500:])
+        check("end-to-end: evaluate the full-view model", r.returncode == 0)
+
 
 if __name__ == "__main__":
     test_milestones()
     test_logged_return_is_sparse()
     test_full_observation()
+    # test_pool_is_identity_on_7x7()
+    # print()
     test_pool_is_identity_on_7x7()
+    test_one_iteration_each_group()
     print()
     print("ALL PASSED" if not FAILED else f"{len(FAILED)} FAILED: {FAILED}")
     sys.exit(1 if FAILED else 0)

@@ -500,8 +500,13 @@ def train(cfg: DictConfig, argv: list[str]) -> str:
     # rollout storage. The image stays uint8 until the forward pass, which is
     # where it gets one-hotted; storing 20 float channels here would be 80x the
     # memory for nothing.
+    # S, N = cfg.ppo.num_steps, cfg.ppo.num_envs
+    # obs_image = torch.zeros((S, N, 7, 7, 3), dtype=torch.uint8, device=device)
     S, N = cfg.ppo.num_steps, cfg.ppo.num_envs
-    obs_image = torch.zeros((S, N, 7, 7, 3), dtype=torch.uint8, device=device)
+    # Image shape from the env, not hard-coded: (7, 7, 3) for the partial view
+    # (baseline, Groups 1-2: identical to before), (N, N, 3) for the Group 3 full view.
+    img_shape = tuple(envs.single_observation_space["image"].shape)
+    obs_image = torch.zeros((S, N, *img_shape), dtype=torch.uint8, device=device)
     obs_dir = torch.zeros((S, N), dtype=torch.long, device=device)
     actions = torch.zeros((S, N), dtype=torch.long, device=device)
     logprobs = torch.zeros((S, N), device=device)
@@ -605,7 +610,8 @@ def train(cfg: DictConfig, argv: list[str]) -> str:
                 advantages[t] = lastgaelam
             returns = advantages + values
 
-        b_image = obs_image.reshape(-1, 7, 7, 3)
+        # b_image = obs_image.reshape(-1, 7, 7, 3)
+        b_image = obs_image.reshape(-1, *img_shape)
         b_dir = obs_dir.reshape(-1)
         b_logprobs = logprobs.reshape(-1)
         b_actions = actions.reshape(-1)
