@@ -83,7 +83,12 @@ def evaluate(model_path, episodes=200, seed=12345, device="cpu", mode="sampled",
     torch.manual_seed(seed)
     ckpt = torch.load(model_path, map_location=device, weights_only=False)
     env_id = env_id or checkpoint_env_id(ckpt)
+    """
     env = make_env(env_id, 0, record_stats=False)()
+    This section is commented and replaced with its following equivalent
+    """
+    env = make_env(env_id, 0, record_stats=False, fully_obs=checkpoint_fully_obs(ckpt))()
+    agent = Agent
     agent = Agent(int(env.action_space.n)).to(device)
     agent.load_state_dict(ckpt["model_state_dict"])
     agent.eval()
@@ -93,8 +98,14 @@ def evaluate(model_path, episodes=200, seed=12345, device="cpu", mode="sampled",
     env.close()
     return out
 
-
+"""    
 def random_baseline(env_id, episodes=200, seed=12345, renderer=None):
+    env = make_env(env_id, 0, record_stats=False)()
+Another comment from the previous version
+"""
+def random_baseline(env_id, episodes=200, seed=12345, renderer=None):
+    # The random policy ignores observations, so the observation wrapper cannot
+    # change its actions or the layouts; the bare env is used as before.
     env = make_env(env_id, 0, record_stats=False)()
     if renderer:
         renderer.attach(env)
@@ -110,6 +121,16 @@ def checkpoint_env_id(ckpt) -> str:
     """
     c = ckpt["config"]
     return c["env"]["env_id"] if "env" in c else c["env_id"]
+
+
+def checkpoint_fully_obs(ckpt) -> bool:
+    """Group 3 models were trained on the full-grid observation, so they must be
+    evaluated on it too (a 7x7 patch is a different input). Only the OBSERVATION
+    is rebuilt from the checkpoint: reward shaping is never applied here, so
+    every group is scored on the environment's sparse objective. Checkpoints
+    without the flag (all baselines) evaluate exactly as before."""
+    env_cfg = ckpt["config"].get("env", {})
+    return bool(env_cfg.get("fully_obs", False))
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +227,8 @@ def main(a: DictConfig):
         "eval_seed": a.seed,
         "device": a.device,
         "policy_mode": a.policy.mode,
+        "fully_obs": checkpoint_fully_obs(ckpt),
+        "reward_shaping_at_eval": False,
         "command": " ".join([sys.executable, os.path.abspath(__file__)] + sys.argv[1:]),
         "trained": summary(r, l),
     }

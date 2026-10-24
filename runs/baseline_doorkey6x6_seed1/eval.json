@@ -1,0 +1,21 @@
+{
+  "command": "/opt/homebrew/anaconda3/envs/cap6671/bin/python /Users/hto/Downloads/School activities/UCF/CAP6671/Project/fall2026-doorkey-cybsecoff31/eval_checkpoint.py model_path=runs/baseline_doorkey6x6_seed1/model.pt policy.also_random=true render.enabled=true",
+  "device": "cpu",
+  "env_id": "MiniGrid-DoorKey-6x6-v0",
+  "episodes": 200,
+  "eval_seed": 12345,
+  "model_path": "/Users/hto/Downloads/School activities/UCF/CAP6671/Project/fall2026-doorkey-cybsecoff31/runs/baseline_doorkey6x6_seed1/model.pt",
+  "policy_mode": "sampled",
+  "random": {
+    "length_mean": 354.895,
+    "return_mean": 0.0167625,
+    "return_std": 0.08766227719920353,
+    "success_rate": 0.04
+  },
+  "trained": {
+    "length_mean": 12.85,
+    "return_mean": 0.9678749999999999,
+    "return_std": 0.006739575283354296,
+    "success_rate": 1.0
+  }
+}

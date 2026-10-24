@@ -1,0 +1,37 @@
+{
+  "batch_size": 1024,
+  "device": "cpu",
+  "env": {
+    "env_id": "MiniGrid-DoorKey-8x8-v0",
+    "fully_obs": false,
+    "r_door": 0.3,
+    "r_key": 0.2,
+    "reward_shaping": true,
+    "total_timesteps": 1000000
+  },
+  "exp_name": "cmp_shaped",
+  "minibatch_size": 256,
+  "num_iterations": 976,
+  "ppo": {
+    "anneal_lr": true,
+    "clip_coef": 0.2,
+    "clip_vloss": true,
+    "ent_coef": 0.01,
+    "gae_lambda": 0.95,
+    "gamma": 0.99,
+    "learning_rate": 0.00025,
+    "max_grad_norm": 0.5,
+    "norm_adv": true,
+    "num_envs": 8,
+    "num_minibatches": 4,
+    "num_steps": 128,
+    "target_kl": null,
+    "update_epochs": 4,
+    "vf_coef": 0.5
+  },
+  "run_name": "cmp_shaped_8x8_seed2",
+  "runs_dir": "runs",
+  "save_model": true,
+  "seed": 2,
+  "torch_threads": 4
+}

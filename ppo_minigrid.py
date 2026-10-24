@@ -118,13 +118,59 @@ def encode_obs(image: torch.Tensor, direction: torch.Tensor):
     dirs = F.one_hot(direction.long(), NUM_DIRECTIONS).float()
     return img, dirs
 
-
+"""
 def make_env(env_id: str, idx: int, record_stats: bool = True):
     def thunk():
         env = gym.make(env_id)
         env = DropMission(env)
         if record_stats:
             env = gym.wrappers.RecordEpisodeStatistics(env)
+        return env
+
+    return thunk
+
+This is the initial make_env function
+"""
+
+"""
+The following is the complete  new version of make_env 
+"""
+
+def make_env(env_id: str, idx: int, record_stats: bool = True,
+             fully_obs: bool = False, reward_shaping: bool = False,
+             r_key: float = 0.2, r_door: float = 0.3):
+    """Build one DoorKey environment.
+
+    The two interventions from the project proposal enter here, and nowhere else,
+    so the PPO code stays a pure control:
+      fully_obs       Group 3. Wrap with MiniGrid's FullyObsWrapper so `image`
+                      becomes the whole (N,N,3) grid instead of the 7x7 patch.
+                      Rewards stay sparse. The CNN handles the larger input
+                      because Agent pools to 1x1 before the linear trunk.
+      reward_shaping  Group 2. Wrap with MilestoneReward (+r_key, +r_door),
+                      applied at training time only. Evaluation builds the bare
+                      env, so the agent is always scored on the sparse objective.
+    Both default off, so the untouched call reproduces the baseline exactly.
+    """
+    def thunk():
+        env = gym.make(env_id)
+        if fully_obs:
+            from minigrid.wrappers import FullyObsWrapper
+            from wrappers import FullObsStateFix
+            env = FullyObsWrapper(env)
+            # FullyObsWrapper stores the agent's direction (0..3) in the state
+            # channel, which the encoder one-hots with only 3 classes. Zero it.
+            env = FullObsStateFix(env)
+        env = DropMission(env)
+        # Episode statistics are recorded BEFORE the shaping bonus is added, so
+        # episodes.csv / metrics.csv log the environment's true sparse return
+        # for every group and the learning curves stay comparable. PPO itself
+        # still trains on the shaped reward (the outer wrapper).
+        if record_stats:
+            env = gym.wrappers.RecordEpisodeStatistics(env)
+        if reward_shaping:
+            from wrappers import MilestoneReward
+            env = MilestoneReward(env, r_key=r_key, r_door=r_door)
         return env
 
     return thunk
@@ -157,8 +203,23 @@ class Agent(nn.Module):
             layer_init(nn.Conv2d(32, 64, kernel_size=3)),              # 5 -> 3
             nn.ReLU(),
             layer_init(nn.Conv2d(64, 64, kernel_size=3)),              # 3 -> 1
-            nn.ReLU(),
+           
+	    # nn.ReLU(),
+            # nn.Flatten(),
+	    
+	    # The previous two lines nn.ReLU(), and nn.Flatten(), are replaced by the following lines
+	   
+	    nn.ReLU(),
+            # Collapse whatever spatial size the conv stack leaves to 1x1. On the
+            # 7x7 partial view the stack already outputs 1x1, so this is the
+            # identity and Groups 1 and 2 are bit-for-bit the baseline. On the
+            # Group 3 full view (e.g. 8x8 -> 6 -> 4 -> 2) it averages the 2x2 map
+            # to 64 features, so the SAME trunk/heads and parameter count are
+            # reused with no change to the action space. This is the only
+            # observation-encoding accommodation the global-view group requires.
+            nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
+ 
         )
         self.trunk = nn.Sequential(
             layer_init(nn.Linear(64 + NUM_DIRECTIONS, hidden)),
@@ -388,10 +449,31 @@ def train(cfg: DictConfig, argv: list[str]) -> str:
             file=sys.stderr,
         )
 
+    """
     seed_everything(cfg.seed)
 
     envs = SyncVectorEnv(
         [make_env(cfg.env.env_id, i) for i in range(cfg.ppo.num_envs)],
+    """
+    """ This is the previous seed_everything(cfg.seed) that is replaced by the following which ends with r_key=r_key, r_door=r_door) for i in range(cfg.ppo.num_envs)],
+    """
+
+    seed_everything(cfg.seed)
+
+    # Intervention flags come from the env config group (conf/env/*.yaml). They
+    # default to the baseline (partial view, sparse reward) when absent, so the
+    # original env files keep working unchanged.
+    fully_obs = bool(OmegaConf.select(cfg, "env.fully_obs", default=False))
+    reward_shaping = bool(OmegaConf.select(cfg, "env.reward_shaping", default=False))
+    r_key = float(OmegaConf.select(cfg, "env.r_key", default=0.2))
+    r_door = float(OmegaConf.select(cfg, "env.r_door", default=0.3))
+    print(f"{'intervention':<14}fully_obs={fully_obs} reward_shaping={reward_shaping} "
+          f"(r_key={r_key}, r_door={r_door})", flush=True)
+
+    envs = SyncVectorEnv(
+        [make_env(cfg.env.env_id, i, fully_obs=fully_obs, reward_shaping=reward_shaping,
+                  r_key=r_key, r_door=r_door) for i in range(cfg.ppo.num_envs)],
+
         autoreset_mode=AutoresetMode.SAME_STEP,
     )
     assert isinstance(envs.single_action_space, spaces.Discrete)
@@ -418,8 +500,13 @@ def train(cfg: DictConfig, argv: list[str]) -> str:
     # rollout storage. The image stays uint8 until the forward pass, which is
     # where it gets one-hotted; storing 20 float channels here would be 80x the
     # memory for nothing.
+    # S, N = cfg.ppo.num_steps, cfg.ppo.num_envs
+    # obs_image = torch.zeros((S, N, 7, 7, 3), dtype=torch.uint8, device=device)
     S, N = cfg.ppo.num_steps, cfg.ppo.num_envs
-    obs_image = torch.zeros((S, N, 7, 7, 3), dtype=torch.uint8, device=device)
+    # Image shape from the env, not hard-coded: (7, 7, 3) for the partial view
+    # (baseline, Groups 1-2: identical to before), (N, N, 3) for the Group 3 full view.
+    img_shape = tuple(envs.single_observation_space["image"].shape)
+    obs_image = torch.zeros((S, N, *img_shape), dtype=torch.uint8, device=device)
     obs_dir = torch.zeros((S, N), dtype=torch.long, device=device)
     actions = torch.zeros((S, N), dtype=torch.long, device=device)
     logprobs = torch.zeros((S, N), device=device)
@@ -523,7 +610,8 @@ def train(cfg: DictConfig, argv: list[str]) -> str:
                 advantages[t] = lastgaelam
             returns = advantages + values
 
-        b_image = obs_image.reshape(-1, 7, 7, 3)
+        # b_image = obs_image.reshape(-1, 7, 7, 3)
+        b_image = obs_image.reshape(-1, *img_shape)
         b_dir = obs_dir.reshape(-1)
         b_logprobs = logprobs.reshape(-1)
         b_actions = actions.reshape(-1)

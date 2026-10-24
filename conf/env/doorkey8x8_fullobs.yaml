@@ -1,0 +1,8 @@
+# Group 3 (global ablation): full grid view + sparse reward.
+# Same task and budget as the control (conf/env/doorkey8x8.yaml); the only
+# change is FullyObsWrapper removing the 7x7 restriction. Rewards stay sparse.
+# @package _group_
+env_id: MiniGrid-DoorKey-8x8-v0
+total_timesteps: 1000000
+fully_obs: true
+reward_shaping: false
