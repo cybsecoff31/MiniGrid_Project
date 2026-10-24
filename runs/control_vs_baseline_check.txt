@@ -1,0 +1,10 @@
+A = runs/baseline_doorkey8x8_seed1
+B = runs/cmp_control_8x8_seed1
+
+config.json: 1 values differ, so this is not a same-config comparison
+  key       A           B
+  exp_name  "baseline"  "cmp_control"
+metrics.csv: identical, 976 rows (wall_time_s and sps ignored)
+episodes.csv: identical, 1561 rows (wall_time_s and sps ignored)
+
+RESULT: runs DO NOT match

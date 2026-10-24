@@ -1,0 +1,7 @@
+group              seeds  success (mean/std/min/max)         return mean  length mean  rand succ
+----------------------------------------------------------------------------------------------------------
+Group1_control         3  33.33% / 47.14% / 0.00% / 100.00%         0.321        435.5     1.50%
+Group2_shaped          3  100.00% / 0.00% / 100.00% / 100.00%         0.974         18.7     1.50%
+Group3_fullobs         3  5.33% / 1.43% / 3.50% / 7.00%         0.024        626.6     1.50%
+----------------------------------------------------------------------------------------------------------
+success = fraction of the 200 evaluation episodes with return > 0 (sparse objective), averaged over seeds; std is the population spread across seeds.
